@@ -1,5 +1,11 @@
 # CPU Video Segmentation Benchmark
 
+## Verified run output
+
+![Synthetic input frame, predicted mask and measured CPU latencies](run-output.png)
+
+This image was rendered from the checked-in measured JSON report and an actual decoded fixture frame and model mask. See the installation and run commands below to reproduce the experiment.
+
 A reproducible computer-vision systems demo: run **the same tiny ONNX graph** using ONNX Runtime CPU and OpenCV DNN CPU, then see how much time goes into decoding, preprocessing, inference, and postprocessing.
 
 ```text
