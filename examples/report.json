@@ -1,0 +1,77 @@
+{
+  "input": {
+    "width": 640,
+    "height": 360,
+    "codec": "FFV1",
+    "source": "deterministic synthetic clips",
+    "nominal_video_fps": 30
+  },
+  "python": "3.12.14",
+  "os": "Linux-6.18.57-x86_64-with-glibc2.41",
+  "versions": {
+    "numpy": "1.26.4",
+    "opencv": "4.10.0",
+    "onnx": "1.17.0",
+    "onnxruntime": "1.20.1"
+  },
+  "results": [
+    {
+      "backend": "ort",
+      "frames": 105,
+      "warmup_frames": 15,
+      "pipeline_fps": 165.79924737531778,
+      "mask_iou": 1.0,
+      "latency_ms": {
+        "decode": {
+          "p50": 0.35251,
+          "p95": 10.895014199999999
+        },
+        "preprocess": {
+          "p50": 0.422326,
+          "p95": 1.2038084
+        },
+        "inference": {
+          "p50": 2.260844,
+          "p95": 2.9427756
+        },
+        "postprocess": {
+          "p50": 0.053251,
+          "p95": 0.07655199999999998
+        },
+        "pipeline": {
+          "p50": 3.371195,
+          "p95": 13.6598812
+        }
+      }
+    },
+    {
+      "backend": "opencv",
+      "frames": 105,
+      "warmup_frames": 15,
+      "pipeline_fps": 157.7412591038903,
+      "mask_iou": 1.0,
+      "latency_ms": {
+        "decode": {
+          "p50": 0.351148,
+          "p95": 13.598500799999998
+        },
+        "preprocess": {
+          "p50": 0.415396,
+          "p95": 0.656542
+        },
+        "inference": {
+          "p50": 0.79683,
+          "p95": 1.0124621999999999
+        },
+        "postprocess": {
+          "p50": 0.028964,
+          "p95": 0.045021399999999996
+        },
+        "pipeline": {
+          "p50": 1.763935,
+          "p95": 15.098645399999999
+        }
+      }
+    }
+  ]
+}
