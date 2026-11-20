@@ -14,31 +14,44 @@ import webbrowser
 import cv2
 import numpy as np
 
-from benchmark import HEIGHT, WIDTH, make_predictor, preprocess, scene, write_model
+from benchmark import (HEIGHT, WIDTH, benchmark, generate, make_predictor,
+                       preprocess, scene, write_model)
 
 FRAME_MAX = 119
+SAMPLE_FRAMES, SAMPLE_WARMUP = 24, 4
 BACKENDS = {"ort": "ONNX Runtime CPU", "opencv": "OpenCV DNN CPU"}
-STYLE = """*{box-sizing:border-box}body{margin:0;background:#0b1421;color:#eef4fa;
+STYLE = """*{box-sizing:border-box}body{margin:0;background:#080712;color:#eef4fa;
 font:16px/1.5 system-ui,sans-serif}main{width:min(1080px,calc(100% - 40px));
 margin:46px auto 36px}h1{font-size:3.5rem;font-size:clamp(2.4rem,5.2vw,4.1rem);line-height:1.02;
 letter-spacing:-.055em;margin:14px 0 14px}h2{font-size:1rem;margin:0 0 12px}p{margin:0}
 .tag,.eyebrow{font-size:.75rem;font-weight:750;letter-spacing:.09em;text-transform:uppercase;
-color:#7be6cd}.tag{display:inline-block;padding:5px 10px;border:1px solid #356052;border-radius:20px}
-.lead,.note,figcaption,.control-note{color:#b1c3d5}.lead{max-width:680px;font-size:1.05rem}
+color:#35f7ff}.tag{display:inline-block;padding:5px 10px;border:1px solid #237782;border-radius:20px}
+.lead,.note,figcaption,.control-note{color:#c0bbd6}.lead{max-width:680px;font-size:1.05rem}
 form{margin:28px 0 20px;padding:18px 20px;display:flex;align-items:end;gap:16px;flex-wrap:wrap;
-background:#132235;border:1px solid #273b52;border-radius:14px}
+background:#141026;border:1px solid #372047;border-radius:14px}
 label{display:block;margin-bottom:5px;font-weight:650;font-size:.87rem}select,input,button{
-font:inherit;padding:9px 11px;border-radius:7px;border:1px solid #4b6179;min-height:44px}
-select,input{background:#0a1626;color:#eef4fa}input{width:100px}button{background:#7be6cd;
-color:#0a2723;font-weight:750;border:1px solid #7be6cd;cursor:pointer}button:hover{background:#b7f2e4}
-:focus-visible{outline:3px solid #ffcc85;outline-offset:3px}.control-note{font-size:.78rem;
+font:inherit;padding:9px 11px;border-radius:7px;border:1px solid #73598c;min-height:44px}
+select,input{background:#110a22;color:#eef4fa}input{width:100px}button{background:#35f7ff;
+color:#082129;font-weight:750;border:1px solid #35f7ff;cursor:pointer}button:hover{background:#9bfcff}
+:focus-visible{outline:3px solid #ff61c4;outline-offset:3px}.control-note{font-size:.78rem;
 margin-left:auto;align-self:center}.stats,.panels{display:grid;gap:13px}.stats{
-grid-template-columns:repeat(3,1fr);margin-bottom:18px}.card,figure{background:#132235;
-border:1px solid #273b52;border-radius:12px}.card{padding:13px 16px}.metric{
+grid-template-columns:repeat(3,1fr);margin-bottom:18px}.card,figure{background:#141026;
+border:1px solid #372047;border-radius:12px}.card{padding:13px 16px}.metric{
 display:block;font-size:1.63rem;font-weight:740;letter-spacing:-.04em;margin:3px 0 0}
 .panels{grid-template-columns:repeat(2,1fr)}figure{margin:0;overflow:hidden;padding:13px}
 img{width:100%;height:auto;display:block;border-radius:6px}figcaption{margin-top:9px;font-size:.84rem}
 .note{margin-top:18px;font-size:.84rem}.note strong{color:#eef4fa}.error{color:#ffbe9c;margin:20px 0}
+
+body{background:radial-gradient(ellipse at 78% -15%,#44083e 0,transparent 45%),#080712}
+header{position:relative;border-left:4px solid #ff38be;padding-left:20px}
+h1{text-shadow:0 0 22px #35f7ff43}section.sample{padding:16px 18px;background:#160b25;
+border:1px solid #8a2c80;border-radius:12px;box-shadow:0 0 28px #ff38be24;margin:20px 0}
+.sample form{background:none;border:0;padding:0;margin:0 0 11px;align-items:center}
+.sample button{background:#ff38be;border-color:#ff38be;color:#22051e;box-shadow:0 0 14px #ff38be50}
+.sample button:hover{background:#ff8bd3}.sample p{font-size:.83rem;color:#c0bbd6}
+.compare{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0}
+.compare .card:first-child{border-color:#237782}.compare .card:last-child{border-color:#81347e}
+.compare .card:last-child .eyebrow{color:#ff79d0}.label{color:#c0bbd6;font-size:.83rem}
 @media(max-width:650px){main{margin:26px auto}.control-note{margin-left:0}.panels{grid-template-columns:1fr}
 .stats{gap:7px}.card{padding:10px}.metric{font-size:1.05rem}.eyebrow{font-size:.65rem}}"""
 
@@ -81,8 +94,36 @@ class Demo:
         mask_image[mask] = (188, 236, 114)
         return latency, intersection / union if union else 1.0, png_uri(frame), png_uri(mask_image)
 
+    def sample_video(self):
+        """Run both engines in sequence on one generated, identical local clip."""
+        with TemporaryDirectory(prefix="segmentation-sample-") as work:
+            video, model = generate(Path(work), SAMPLE_FRAMES)
+            return [benchmark(video, model, backend, SAMPLE_FRAMES, SAMPLE_WARMUP)
+                    for backend in BACKENDS]
 
-def render(demo, backend="ort", frame=24, error=""):
+
+def render_sample(backend, frame, results):
+    comparison = ""
+    if results is not None:
+        cards = []
+        for result in results:
+            pipeline = result["latency_ms"]["pipeline"]
+            inference = result["latency_ms"]["inference"]
+            cards.append(f'<div class="card"><span class="eyebrow">{BACKENDS[result["backend"]]}</span>'
+                         f'<span class="metric">{pipeline["p50"]:.2f} ms</span>'
+                         f'<p>Pipeline p50 · p95 {pipeline["p95"]:.2f} ms</p>'
+                         f'<p>Inference p50 {inference["p50"]:.2f} ms · Mask IoU {result["mask_iou"]:.3f}</p></div>')
+        comparison = ('<div class="compare" aria-label="Video benchmark results">' + "".join(cards)
+                      + '</div><p id="result-note">Same FFV1 clip, 20 measured frames per engine after 4 warm-up frames. '
+                        'Sequential runs; timings vary, and this is not a general backend ranking.</p>')
+    return f"""<section class="sample" aria-labelledby="sample-heading">
+<h2 id="sample-heading">Sample video · CPU head-to-head</h2>
+<form method="post" action="/sample?backend={backend}&amp;frame={frame}">
+<button type="submit">Run sample video</button><p>Both engines · 24 synthetic frames · 640 × 360</p></form>
+<p>Pipeline time is read/decode through mask threshold. Inference time covers only the model call.</p>{comparison}</section>"""
+
+
+def render(demo, backend="ort", frame=24, error="", comparison=None):
     options = "".join(f'<option value="{key}"{" selected" if backend == key else ""}>'
                       f'{name}</option>' for key, name in BACKENDS.items())
     content = ""
@@ -108,6 +149,7 @@ alt="Green predicted foreground shapes on a dark background"><figcaption>Positiv
 <body><main>
 <header><span class="tag">Local demo · CPU only</span><h1>CPU Segmentation Lab</h1>
 <p class="lead">Inspect the same tiny ONNX model on two CPU backends. Select a synthetic frame to run inference and see the predicted foreground.</p></header>
+{render_sample(backend, frame, comparison)}
 <form action="/" method="get"><div><label for="backend">Inference backend</label>
 <select id="backend" name="backend">{options}</select></div><div><label for="frame">Frame</label>
 <input id="frame" name="frame" type="number" min="0" max="{FRAME_MAX}" value="{frame}" required>
@@ -121,6 +163,18 @@ This is not a trained model or a real-world accuracy claim.</p>
 
 def make_handler(demo):
     class Handler(BaseHTTPRequestHandler):
+        def do_POST(self):
+            target = urlsplit(self.path)
+            if target.path != "/sample":
+                self.send_error(HTTPStatus.NOT_FOUND)
+                return
+            try:
+                backend, frame = parse_selection(target.query)
+            except ValueError as exc:
+                self.send_page(HTTPStatus.BAD_REQUEST, render(demo, error=str(exc)))
+                return
+            self.send_page(HTTPStatus.OK, render(demo, backend, frame, comparison=demo.sample_video()))
+
         def do_GET(self):
             target = urlsplit(self.path)
             if target.path != "/":
@@ -132,6 +186,9 @@ def make_handler(demo):
                 status, page = HTTPStatus.BAD_REQUEST, render(demo, error=str(exc))
             else:
                 status, page = HTTPStatus.OK, render(demo, backend, frame)
+            self.send_page(status, page)
+
+        def send_page(self, status, page):
             body = page.encode("utf-8")
             self.send_response(status)
             self.send_header("Content-Type", "text/html; charset=utf-8")

@@ -56,3 +56,16 @@ class GuiTests(TestCase):
                 self.client.open(self.url + suffix, timeout=4)
             self.assertEqual(caught.exception.code, status)
             caught.exception.close()
+
+    def test_video_runs_both_backends(self):
+        with self.client.open(f"{self.url}/sample?backend=opencv&frame=91",
+                              data=b"", timeout=12) as response:
+            self.assertEqual(response.status, 200)
+            page = response.read().decode()
+        self.assertIn("Frame 091", page)
+        self.assertIn('aria-label="Video benchmark results"', page)
+        self.assertIn("ONNX Runtime CPU</span>", page)
+        self.assertIn("OpenCV DNN CPU</span>", page)
+        self.assertEqual(page.count("Pipeline p50 · p95"), 2)
+        self.assertEqual(page.count("Mask IoU 1.000"), 2)
+        self.assertIn("20 measured frames per engine after 4 warm-up frames", page)

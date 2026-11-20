@@ -2,6 +2,10 @@
 
 A reproducible computer-vision systems demo: run **the same tiny ONNX graph** using ONNX Runtime CPU and OpenCV DNN CPU, then see how much time goes into decoding, preprocessing, inference, and postprocessing.
 
+![Live Chromium screenshot showing the two-backend sample video comparison](examples/gui-video-comparison.jpg)
+
+The comparison screenshot shows real timings captured after clicking **Run sample video**. The original GUI screenshot below shows the single-frame workflow.
+
 ![Live Chromium screenshot of the CPU Segmentation Lab showing a synthetic frame and its predicted mask](examples/gui-screenshot.jpg)
 
 The screenshot captures a real local GUI run on frame 91 with OpenCV DNN CPU. Its single-run inference time varies across runs and is not part of the benchmark table below.
@@ -17,6 +21,8 @@ python gui.py
 Open **http://127.0.0.1:8765/** on the same computer (or run `python gui.py --open` to launch your default browser). This command is the same in Windows PowerShell, macOS, and Linux once the virtual environment is active. Verified on Linux x86-64; Windows and macOS were not tested here. Use `--port 0` if the default port is busy and open the URL printed by the program. Press **Ctrl+C** in the terminal to stop it.
 
 Choose a CPU backend and a frame index (0–119), then click **Run inference**. The app generates the selected frame in memory, runs the same checked ONNX graph as the benchmark, and shows the actual predicted mask, its synthetic IoU, and the elapsed time for that single warmed inference call. Unlike the benchmark below, this time excludes video decoding and is not a p50/p95 statistic.
+
+Click **Run sample video** to create a short local FFV1 video and run both engines on the same clip. The comparison shows median (p50) and p95 per-frame latency from video read/decode through the predicted mask threshold, plus inference-only p50 and synthetic IoU. It uses 24 generated frames (4 warm-ups, 20 measured per backend). This is a fresh measurement each time, separate from the 120-frame published benchmark; the two engines run in sequence. A short run is not a definitive backend ranking.
 
 The server listens only on `127.0.0.1`, accepts no uploads, and uses no network services, real footage, or remote assets. Install dependencies once before running offline. It is a local demo, not a production web server.
 
