@@ -1,12 +1,30 @@
 # CPU Video Segmentation Benchmark
 
-## Verified run output
+A reproducible computer-vision systems demo: run **the same tiny ONNX graph** using ONNX Runtime CPU and OpenCV DNN CPU, then see how much time goes into decoding, preprocessing, inference, and postprocessing.
+
+![Live Chromium screenshot of the CPU Segmentation Lab showing a synthetic frame and its predicted mask](examples/gui-screenshot.jpg)
+
+The screenshot captures a real local GUI run on frame 91 with OpenCV DNN CPU. Its single-run inference time varies across runs and is not part of the benchmark table below.
+
+## Interactive GUI: CPU Segmentation Lab
+
+After installing the dependencies using the setup instructions below, launch the local browser GUI:
+
+```bash
+python gui.py
+```
+
+Open **http://127.0.0.1:8765/** on the same computer (or run `python gui.py --open` to launch your default browser). This command is the same in Windows PowerShell, macOS, and Linux once the virtual environment is active. Verified on Linux x86-64; Windows and macOS were not tested here. Use `--port 0` if the default port is busy and open the URL printed by the program. Press **Ctrl+C** in the terminal to stop it.
+
+Choose a CPU backend and a frame index (0–119), then click **Run inference**. The app generates the selected frame in memory, runs the same checked ONNX graph as the benchmark, and shows the actual predicted mask, its synthetic IoU, and the elapsed time for that single warmed inference call. Unlike the benchmark below, this time excludes video decoding and is not a p50/p95 statistic.
+
+The server listens only on `127.0.0.1`, accepts no uploads, and uses no network services, real footage, or remote assets. Install dependencies once before running offline. It is a local demo, not a production web server.
+
+## Verified benchmark output
 
 ![Synthetic input frame, predicted mask and measured CPU latencies](run-output.png)
 
 This image was rendered from the checked-in measured JSON report and an actual decoded fixture frame and model mask. See the installation and run commands below to reproduce the experiment.
-
-A reproducible computer-vision systems demo: run **the same tiny ONNX graph** using ONNX Runtime CPU and OpenCV DNN CPU, then see how much time goes into decoding, preprocessing, inference, and postprocessing.
 
 ```text
 Deterministic scene generator ──► FFV1 video ──► OpenCV decoder

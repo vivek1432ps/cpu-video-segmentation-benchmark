@@ -41,6 +41,11 @@ def generate(folder, frames):
     finally:
         writer.release()
 
+    return video, write_model(folder / "synthetic.onnx")
+
+
+def write_model(model_path):
+    """Generate the same checked model for the benchmark and live demo."""
     # Hand-designed linear classifier for synthetic red shapes, not trained.
     weights = numpy_helper.from_array(np.array([-0.5, -0.5, 1], dtype=np.float32)
                                      .reshape(1, 3, 1, 1), "weights")
@@ -58,9 +63,8 @@ def generate(folder, frames):
     model = helper.make_model(graph, opset_imports=[helper.make_opsetid("", 13)],
                               ir_version=9)
     onnx.checker.check_model(model)
-    model_path = folder / "synthetic.onnx"
     onnx.save(model, model_path)
-    return video, model_path
+    return model_path
 
 
 def preprocess(frame):
