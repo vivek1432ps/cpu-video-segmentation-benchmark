@@ -1,0 +1,5 @@
+# Install in a separate virtual environment: Ultralytics uses opencv-python,
+# while the original benchmark uses opencv-python-headless.
+ultralytics==8.4.216
+# Official Ultralytics tokenizer fork for text prompts (requires Git).
+clip @ git+https://github.com/ultralytics/CLIP.git@7ffa84b3bfa40c42ecc1c77147a855e69cb2dd40

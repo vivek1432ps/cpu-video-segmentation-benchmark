@@ -10,6 +10,46 @@ The comparison screenshot shows real timings captured after clicking **Run sampl
 
 The screenshot captures a real local GUI run on frame 91 with OpenCV DNN CPU. Its single-run inference time varies across runs and is not part of the benchmark table below.
 
+## Segment what you want with Ultralytics YOLOE-26
+
+Type object names such as `person, bus` to produce instance masks from a local image. Change the prompt to change the target, without retraining or relying on a fixed class list. This is useful for inspecting new scenes and quickly drafting annotations; verify masks before using them as ground truth.
+
+![An actual YOLOE-26n CPU run showing a NASA input photo, the person mask overlay, and an exported binary mask](examples/yoloe26-person-preview.jpg)
+
+Example: real `yoloe-26n-seg.pt` CPU output for the prompt `person`. Input photo: [NASA, Eileen Collins, public-domain sample distributed by scikit-image](https://scikit-image.org/docs/stable/api/skimage.data.html#skimage.data.astronaut). The mask is a prediction, not a reference annotation.
+
+### Install the optional prompt lab
+
+Use Python 3.12 and Git on your PATH. **Use a separate virtual environment**: YOLOE uses `opencv-python`, while the original benchmark uses `opencv-python-headless`.
+
+```bash
+python -m venv .venv-yoloe
+source .venv-yoloe/bin/activate  # Windows PowerShell: .venv-yoloe\Scripts\Activate.ps1
+python -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+python -m pip install -r requirements-yoloe.txt
+```
+
+The PyTorch command above is for CPU installs on Linux/Windows. On macOS use the [PyTorch installation instructions](https://pytorch.org/get-started/locally/). The desktop GUI needs Tkinter (on Linux, install your distribution's Python Tk package if missing). First setup needs network access for dependencies, the official checkpoint, and the text encoder (about 254 MB). Run from the same directory to reuse the downloaded model files. Your images are read and processed on your machine; this app does not upload them.
+
+### Interactive desktop GUI
+
+```bash
+python prompt_gui.py
+```
+
+Open a local image, enter comma-separated object names, then click **Segment**. The side-by-side preview shows the input and mask overlay. Adjust the terms and run again on the same image. **Export masks** saves an overlay, one full-resolution binary PNG per instance, and a JSON report. No server is started. The GUI uses the nano checkpoint and CPU.
+
+### Command line
+
+```bash
+python prompt_segment.py path/to/image.jpg --prompts "person, bus" --imgsz 384 --out out/prompt-demo
+python -m unittest -v test_prompt_segment
+```
+
+The output directory must be new. `result.json` records the prompts, image dimensions, instance labels and confidence scores, and time spent in the model's prediction call, which can include warm-up on first use. An empty prediction is valid: the original image is written as the overlay and the instance list is empty. Use `--conf` to adjust the minimum confidence, `--imgsz` for the input resolution, or `--model yoloe-26s-seg.pt` to try the larger small model. Large inputs use a reduced instance limit to bound the memory cost of full-resolution masks; resize first if you need more instances per image. Text prompts work best as short object-category names rather than instructions.
+
+This PyTorch demo is **separate from the existing synthetic ONNX benchmark**. Its timings are not comparable to the ONNX backend table, and no real-world accuracy metric is claimed. Visual-box prompting, prompt-free mode, video, and retraining are not part of this demo. Model weights are downloaded from Ultralytics rather than checked into the repo. Review [Ultralytics YOLOE usage and model documentation](https://docs.ultralytics.com/models/yoloe/) and [its licensing terms](https://www.ultralytics.com/license) before redistribution or commercial deployment.
+
 ## Interactive GUI: CPU Segmentation Lab
 
 After installing the dependencies using the setup instructions below, launch the local browser GUI:

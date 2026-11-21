@@ -1,3 +1,8 @@
 .venv/
 out/
 __pycache__/
+
+# Optional YOLOE downloads and environment
+.venv-yoloe/
+yoloe-26*-seg.pt
+mobileclip2_b.ts
